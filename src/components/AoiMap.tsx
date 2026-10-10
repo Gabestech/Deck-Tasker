@@ -40,7 +40,7 @@ function zoomFor(lat: number, heightKm: number) {
 type AddLayerArg = Parameters<MapLibreMap["addLayer"]>[0];
 const addLayer = (map: MapLibreMap, spec: unknown) => map.addLayer(spec as AddLayerArg);
 
-const EMPTY = { type: "FeatureCollection" as const, features: [] as never[] };
+const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 const fmtKm2 = (n: number) => `${Math.round(n).toLocaleString("en-US")} km²`;
 
