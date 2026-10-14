@@ -1,7 +1,6 @@
-import { QueueView } from "@/components/QueueView";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Queue | Deck Tasker" };
-
+// Renamed to Requests. Keeps old links working.
 export default function QueuePage() {
-  return <QueueView />;
+  redirect("/requests");
 }

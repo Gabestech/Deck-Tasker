@@ -34,7 +34,7 @@ import type {
 } from "@/lib/types";
 import type { AoiShape } from "./AoiMap";
 import { Field, Notice, OptionCards, Slider, inputCls } from "./form-bits";
-import { Bar, Eyebrow, Panel, StatusChip, TeamChip, Tip, fmtDate, fmtNum } from "./ui";
+import { Bar, Eyebrow, PageHeader, Panel, Segmented, StatusChip, TeamChip, Tip, fmtDate, fmtNum } from "./ui";
 
 const AoiMap = dynamic(() => import("./AoiMap"), {
   ssr: false,
@@ -347,46 +347,29 @@ export function TaskingForm() {
 
   /* ---------- render ---------- */
   return (
-    <div className="mx-auto flex max-w-[1280px] flex-col gap-4 p-6 xl:h-full">
-      <div className="flex shrink-0 flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-1 text-sm font-medium text-cyan-300">Collection tasking</p>
-          <h2 className="flex items-center gap-2 text-2xl font-semibold">
-            New collection request
-            <Tip text="One intake for every team. Requests are scored in the open and funded from a fair-share budget for the cycle." />
-          </h2>
-        </div>
-
-        <div className="flex gap-2" role="tablist" aria-label="Request type">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={kind === "satellite"}
-            onClick={() => setKind("satellite")}
-            className={`rounded-full border px-4 py-2 text-sm transition active:scale-95 ${
-              kind === "satellite"
-                ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
-                : "border-white/10 text-slate-400 hover:text-white"
-            }`}
-          >
-            Satellite · Tanager
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={kind === "airborne"}
-            onClick={() => setKind("airborne")}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition active:scale-95 ${
-              kind === "airborne"
-                ? "border-white/30 bg-white/5 text-slate-100"
-                : "border-white/10 text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            Airborne campaign
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-slate-400">Soon</span>
-          </button>
-        </div>
-      </div>
+    <div className="mx-auto flex max-w-[1280px] flex-col gap-4 p-4 sm:p-6 xl:h-full">
+      <PageHeader
+        title="New request"
+        meta="One intake for every team"
+        actions={
+          <Segmented
+            label="Request type"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { id: "satellite", label: "Tanager satellite" },
+              {
+                id: "airborne",
+                label: (
+                  <>
+                    Airborne <span className="text-[10px] text-slate-500">Soon</span>
+                  </>
+                ),
+              },
+            ]}
+          />
+        }
+      />
 
       {kind === "airborne" ? (
         <AirbornePlaceholder onBack={() => setKind("satellite")} />
@@ -396,7 +379,7 @@ export function TaskingForm() {
         <div className="grid grid-cols-1 gap-6 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-h-0 flex-col">
             {/* step tabs */}
-            <ol className="mb-3 flex shrink-0 flex-wrap gap-1.5" aria-label="Steps">
+            <ol className="-mx-4 mb-3 flex shrink-0 gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Steps">
               {STEPS.map((label, i) => {
                 const bad = issues.some((x) => x.step === i);
                 return (
@@ -405,9 +388,9 @@ export function TaskingForm() {
                       type="button"
                       onClick={() => setStep(i)}
                       aria-current={i === step ? "step" : undefined}
-                      className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs transition active:scale-95 ${
+                      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs transition ${
                         i === step
-                          ? "bg-white/10 text-white shadow-[0_1px_0_rgba(255,255,255,0.1)_inset]"
+                          ? "bg-white/[0.08] text-white"
                           : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
                       }`}
                     >
@@ -470,7 +453,7 @@ export function TaskingForm() {
                         className={inputCls}
                         value={d.requester}
                         onChange={(e) => set("requester", e.target.value)}
-                        placeholder="Name"
+                        placeholder="e.g. Isaac Newton"
                       />
                     </Field>
                   </div>
@@ -1063,10 +1046,10 @@ function Confirmation({
       <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-400">{result.reason}</p>
       <div className="mt-7 flex justify-center gap-3">
         <Link
-          href="/queue"
+          href="/requests"
           className="btn btn-primary"
         >
-          See it in the queue
+          See it in Requests
         </Link>
         <button
           type="button"

@@ -17,6 +17,7 @@ export interface AllocationOptions {
 type Num = Record<TeamId, number>;
 const zero = (): Num => ({ og: 0, impact: 0, science: 0, waste: 0 });
 const EPS = 1e-6;
+const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
 /**
  * Max-min fair ("water-filling") split of `pool` credits across teams.
@@ -130,14 +131,13 @@ export function allocate(scored: ScoredRequest[], opts: AllocationOptions): Allo
     for (const t of TEAMS) left[t.id] = Math.max(0, level[t.id] - initial[t.id]);
 
     // 3) Within each team, fund by score. Skip what doesn't fit and keep going (backfill).
-    const budget: Num = { ...left };
     for (const t of TEAMS) {
       const mine = pending.filter((r) => r.team === t.id && !out.has(r.id)).sort(byScore);
       for (const r of mine) {
         if (r.creditCost <= left[t.id] + EPS) {
           left[t.id] -= r.creditCost;
           allocated[t.id] += r.creditCost;
-          set(r, "funded", "team", `Within ${t.name}'s equal share`);
+          set(r, "funded", "team", "Within team share");
         }
       }
     }
@@ -153,21 +153,15 @@ export function allocate(scored: ScoredRequest[], opts: AllocationOptions): Allo
       if (!next) break;
       leftover -= next.creditCost;
       allocated[next.team] += next.creditCost;
-      set(next, "funded", "backfill", "Backfilled from unused capacity");
+      set(next, "funded", "backfill", "Spare credits");
     }
 
     // 5) Everything else waits, with a plain-language reason.
     for (const r of pending) {
       if (out.has(r.id)) continue;
-      const name = TEAM_BY_ID[r.team].name;
-      const total = Math.round(budget[r.team]);
+      const short = TEAM_BY_ID[r.team].short;
       const room = Math.round(left[r.team]);
-      set(
-        r,
-        "waitlisted",
-        null,
-        `Needs ${r.creditCost} credits; ${name} has ${room} of its ${total} equal-share credits left.`,
-      );
+      set(r, "waitlisted", null, `Needs ${fmt(r.creditCost)} · ${short} has ${fmt(room)} left`);
     }
   } else {
     // Unfair baselines, for comparison. They use all capacity, no reserve.
@@ -181,12 +175,12 @@ export function allocate(scored: ScoredRequest[], opts: AllocationOptions): Allo
           r,
           "funded",
           "pool",
-          policy === "priority" ? "Highest scores funded first" : "First come, first served",
+          policy === "priority" ? "High score" : "Submitted early",
         );
       }
     }
     for (const r of pending) {
-      if (!out.has(r.id)) set(r, "waitlisted", null, "Capacity ran out before this request.");
+      if (!out.has(r.id)) set(r, "waitlisted", null, "Credits ran out");
     }
   }
 

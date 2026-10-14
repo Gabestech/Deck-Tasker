@@ -4,103 +4,100 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-const icon = "h-[22px] w-[22px]";
+const icon = "h-[20px] w-[20px]";
 
 const NAV = [
   {
     href: "/",
-    label: "Ops",
+    label: "Live Orbits",
     icon: (
       <svg className={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" />
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M3.5 12h17M12 3.5c2.8 2.6 2.8 14.4 0 17M12 3.5c-2.8 2.6-2.8 14.4 0 17" />
       </svg>
     ),
   },
   {
-    href: "/tasking",
-    label: "Task",
+    href: "/budget",
+    label: "Budget",
     icon: (
       <svg className={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <circle cx="12" cy="12" r="7" />
-        <path d="M12 2v5M12 17v5M2 12h5M17 12h5" />
+        <rect x="3" y="9" width="18" height="6" rx="1.5" />
+        <path d="M9 9v6M14 9v6M3 5h11M3 19h18" />
       </svg>
     ),
   },
   {
-    href: "/queue",
-    label: "Queue",
+    href: "/requests",
+    label: "Requests",
     icon: (
       <svg className={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path d="M4 6h16M4 12h16M4 18h10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/capacity",
-    label: "Capacity",
-    icon: (
-      <svg className={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path d="M5 20V10M12 20V4M19 20v-7" />
+        <path d="M9 6h11M9 12h11M9 18h11" />
+        <path d="M4 6h1M4 12h1M4 18h1" strokeLinecap="round" strokeWidth="2.2" />
       </svg>
     ),
   },
 ];
 
+function isActive(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
+
+function LogoMark() {
+  return (
+    <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.05]">
+      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="3.2" fill="#AEB8FF" />
+        <ellipse cx="12" cy="12" rx="9" ry="4.2" transform="rotate(-28 12 12)" stroke="#AEB8FF" strokeOpacity="0.55" strokeWidth="1.3" />
+        <circle cx="19.2" cy="8.4" r="1.4" fill="#fff" />
+      </svg>
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="relative z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0B0D1F]/70 px-6 backdrop-blur-xl">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#8F9CFF] to-[#C77DFF] text-sm font-bold text-white shadow-[0_1px_0_rgba(255,255,255,0.45)_inset,0_10px_20px_-8px_rgba(143,156,255,0.9)]">
-            DT
-          </div>
-          <div className="leading-tight">
-            <div className="flex items-center gap-3">
-              <h1 className="text-[15px] font-semibold tracking-tight">Deck Tasker</h1>
-              <span className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-2.5 pr-3 text-xs leading-none shadow-[0_1px_0_rgba(255,255,255,0.06)_inset] sm:inline-flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(174,184,255,0.9)]" aria-hidden />
-                <span className="text-slate-500">Created by</span>
-                <span className="font-semibold tracking-tight text-slate-100">Gabriel</span>
-              </span>
-            </div>
-            <p className="mt-0.5 text-xs text-slate-500">Tanager collection operations</p>
-          </div>
+    <div className="flex h-dvh flex-col">
+      <header className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#0B0D1F]/90 px-4 backdrop-blur-xl sm:px-5">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <LogoMark />
+          <span className="truncate text-[15px] font-semibold tracking-tight">Deck Tasker</span>
+          <span className="hidden items-center gap-1.5 rounded-md border border-white/[0.08] px-2 py-0.5 text-[11px] leading-5 sm:inline-flex">
+            <span className="text-slate-500">Created by</span>
+            <span className="font-medium text-slate-200">Gabriel</span>
+          </span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <span className="hidden rounded-full border border-amber-300/20 bg-amber-300/5 px-3 py-1 text-xs text-amber-200 lg:inline">
-            Prototype with simulated data
-          </span>
-          <div className="hidden items-center gap-2 text-xs text-slate-400 md:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
-            System online
-          </div>
-          <Link href="/tasking" className="btn btn-primary">
-            New request
+        <div className="flex shrink-0 items-center gap-4">
+          <span className="hidden text-xs text-slate-500 md:inline">Simulated data</span>
+          <Link
+            href="/tasking"
+            aria-current={pathname.startsWith("/tasking") ? "page" : undefined}
+            className="btn btn-primary !px-3.5 !py-1.5 !text-[13px]"
+          >
+            <span aria-hidden className="text-base leading-none">+</span>
+            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">New request</span>
           </Link>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-[76px] shrink-0 flex-col items-center border-r border-white/[0.07] py-4">
-          <nav className="flex flex-col gap-1.5">
+        {/* Side rail: tablet and up */}
+        <aside className="hidden w-[88px] shrink-0 flex-col items-center border-r border-white/[0.07] bg-[#080A18] py-3 md:flex">
+          <nav className="flex flex-col gap-2">
             {NAV.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = isActive(pathname, item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex w-[60px] flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
-                    active
-                      ? "bg-white/[0.08] text-white shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_10px_22px_-12px_rgba(111,125,242,0.9)]"
-                      : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
-                  }`}
+                  className="nav-btn w-[72px] px-1 py-2.5"
                 >
-                  <span className={active ? "text-cyan-300" : ""}>{item.icon}</span>
+                  <span className="nav-icon">{item.icon}</span>
                   {item.label}
                 </Link>
               );
@@ -108,19 +105,37 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div
-            className="mt-auto flex w-[60px] cursor-not-allowed flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-medium text-slate-700"
+            className="mt-auto flex w-[72px] cursor-not-allowed flex-col items-center gap-1 py-2.5 text-[11px] font-medium leading-tight text-slate-600"
             title="Airborne campaign tasking: coming soon"
           >
             <svg className={icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
               <path d="M2 14l8-2 5-9 2 1-2 8 6 2v2l-7-1-2 5h-2l0-5-8-1z" />
             </svg>
-            Air
-            <span className="-mt-0.5 text-[9px] text-slate-600">soon</span>
+            Airborne
+            <span className="text-[10px] text-slate-700">Soon</span>
           </div>
         </aside>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
+
+      {/* Bottom tab bar: phones */}
+      <nav className="flex shrink-0 gap-2 border-t border-white/[0.07] bg-[#080A18] px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden">
+        {NAV.map((item) => {
+          const active = isActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className="nav-btn flex-1 py-1.5"
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

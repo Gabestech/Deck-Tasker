@@ -1,7 +1,6 @@
-import { CapacityView } from "@/components/CapacityView";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Capacity | Deck Tasker" };
-
+// Renamed to Budget. Keeps old links working.
 export default function CapacityPage() {
-  return <CapacityView />;
+  redirect("/budget");
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { TEAM_BY_ID } from "@/lib/config";
 import type { AllocatedRequest, TeamId } from "@/lib/types";
+import { Tip } from "./Tip";
 
 export function Panel({
   children,
@@ -11,41 +12,78 @@ export function Panel({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-white/[0.08] bg-white/[0.035] shadow-[0_1px_0_0_rgba(255,255,255,0.07)_inset,0_18px_40px_-22px_rgba(0,0,0,0.75)] backdrop-blur-xl ${className}`}
+      className={`rounded-xl border border-white/[0.08] bg-[#11132A]/80 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] ${className}`}
     >
       {children}
     </div>
   );
 }
 
-/** Small "i" that reveals a longer explanation on hover or keyboard focus. */
-export function Tip({
-  text,
-  align = "start",
+/** Title + one quiet line of context. Same on every page. */
+export function PageHeader({
+  title,
+  meta,
+  actions,
 }: {
-  text: string;
-  align?: "start" | "center" | "end";
+  title: string;
+  meta?: ReactNode;
+  actions?: ReactNode;
 }) {
-  const pos =
-    align === "end" ? "right-0" : align === "center" ? "left-1/2 -translate-x-1/2" : "left-0";
   return (
-    <span className="group/tip relative inline-flex align-middle">
-      <button
-        type="button"
-        aria-label="More info"
-        className="flex h-4 w-4 items-center justify-center rounded-full border border-white/15 text-[10px] font-semibold leading-none text-slate-500 transition hover:border-white/40 hover:text-slate-200 focus-visible:text-slate-200"
-      >
-        i
-      </button>
-      <span
-        role="tooltip"
-        className={`pointer-events-none invisible absolute top-full z-50 mt-2 w-64 rounded-xl border border-white/10 bg-[#0B0D1F] p-3 text-xs font-normal leading-relaxed text-slate-300 opacity-0 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] transition duration-150 group-hover/tip:visible group-hover/tip:opacity-100 group-focus-within/tip:visible group-focus-within/tip:opacity-100 ${pos}`}
-      >
-        {text}
-      </span>
-    </span>
+    <div className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-white sm:text-xl">{title}</h1>
+        {meta && <p className="mt-0.5 text-[13px] text-slate-500">{meta}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
   );
 }
+
+/** Small inline toggle group. Scrolls sideways on narrow screens instead of wrapping. */
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+  className = "",
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { id: T; label: ReactNode }[];
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className={`inline-flex max-w-full shrink-0 overflow-x-auto rounded-lg border border-white/[0.08] bg-black/20 p-0.5 [scrollbar-width:none] ${className}`}
+    >
+      {options.map((o) => {
+        const on = o.id === value;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(o.id)}
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition ${
+              on
+                ? "bg-[#2B3170] text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_1px_3px_rgba(0,0,0,0.4)]"
+                : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export { Tip };
 
 export function Eyebrow({
   children,
@@ -67,37 +105,44 @@ export function Eyebrow({
   );
 }
 
+export function TeamDot({ team, className = "" }: { team: TeamId; className?: string }) {
+  return (
+    <span
+      className={`inline-block h-2 w-2 shrink-0 rounded-full ${className}`}
+      style={{ background: TEAM_BY_ID[team].color }}
+      aria-hidden
+    />
+  );
+}
+
 export function TeamChip({ team, className = "" }: { team: TeamId; className?: string }) {
-  const t = TEAM_BY_ID[team];
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs text-slate-300 ${className}`}>
-      <span
-        className="h-2 w-2 rounded-full"
-        style={{ background: t.color }}
-        aria-hidden
-      />
-      {t.name}
+      <TeamDot team={team} />
+      {TEAM_BY_ID[team].name}
     </span>
   );
 }
 
 const STATUS_STYLES: Record<AllocatedRequest["status"], string> = {
-  funded: "bg-emerald-400/10 text-emerald-300",
-  waitlisted: "bg-amber-300/10 text-amber-200",
-  completed: "bg-slate-400/10 text-slate-300",
+  funded: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
+  waitlisted: "bg-amber-300/10 text-amber-200 ring-amber-300/20",
+  completed: "bg-white/[0.05] text-slate-400 ring-white/10",
+};
+
+export const STATUS_LABEL: Record<AllocatedRequest["status"], string> = {
+  funded: "Funded",
+  waitlisted: "Waitlisted",
+  completed: "Collected",
 };
 
 export function StatusChip({ r }: { r: Pick<AllocatedRequest, "status" | "via"> }) {
-  const label =
-    r.status === "completed"
-      ? "Collected"
-      : r.status === "waitlisted"
-        ? "Waitlisted"
-        : r.via === "reserve"
-          ? "Funded · reserve"
-          : "Funded";
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs ${STATUS_STYLES[r.status]}`}>{label}</span>
+    <span
+      className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${STATUS_STYLES[r.status]}`}
+    >
+      {STATUS_LABEL[r.status]}
+    </span>
   );
 }
 

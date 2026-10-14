@@ -29,19 +29,24 @@ type FollowMode = "off" | "T1" | "T2" | "both";
 type AddLayerArg = Parameters<MapLibreMap["addLayer"]>[0];
 const addLayer = (map: MapLibreMap, spec: unknown) => map.addLayer(spec as AddLayerArg);
 
-const pill =
-  "rounded-full border border-white/10 bg-[#0B0D1F]/75 px-3 py-1.5 text-xs font-medium text-slate-200 " +
-  "shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_6px_16px_-6px_rgba(0,0,0,0.6)] backdrop-blur-xl " +
-  "transition active:scale-95 hover:bg-white/10";
-const pillOn =
-  "!border-cyan-300/50 !bg-cyan-400/20 !text-white shadow-[0_0_0_3px_rgba(143,156,255,0.18)]";
+const ctl =
+  "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/[0.08] hover:text-white";
+const ctlOn = "bg-white/[0.12] text-white";
 
 const emptyFC = { type: "FeatureCollection" as const, features: [] as never[] };
 
-const VIEWS = {
-  americas: { center: [-104, 35] as [number, number], zoom: 3.2 },
-  world: { center: [-40, 20] as [number, number], zoom: 1.2 },
-};
+/** Zoom at which the whole globe fits the map box with a little margin. */
+function globeFitZoom(el: HTMLElement) {
+  const min = Math.min(el.clientWidth || 600, el.clientHeight || 600);
+  // Globe diameter is roughly 163 px at zoom 0 and doubles per zoom level.
+  return Math.min(2.2, Math.max(0, Math.log2((0.8 * min) / 163)));
+}
+
+/** Where the Tanagers are right now, as one point (falls back to the first if they're far apart). */
+function tanagerCenter(t: number): [number, number] {
+  const c = sphericalMidpoint(SATELLITES.map((d) => subpoint(d.orbit, t)));
+  return [c[0], Math.max(-35, Math.min(35, c[1]))];
+}
 
 /** Popup bodies are built from text nodes, never HTML strings, so user-typed names can't inject markup. */
 function sphericalMidpoint(pts: [number, number][]): [number, number] {
@@ -120,7 +125,6 @@ function buildSatCard(def: SatelliteDef) {
   bar.append(fill);
   prog.append(progRow, bar);
   const eta = node("div", "sat-card-eta");
-  eta.title = "Simulated time";
   body.append(label, target, meta, prog, eta);
 
   const foot = node("div", "sat-card-foot");
@@ -141,12 +145,12 @@ function buildSatCard(def: SatelliteDef) {
     const collecting = s?.status === "COLLECTING";
     chip.textContent = collecting ? "Collecting" : "In transit";
     chip.dataset.status = s?.status ?? "TRANSIT";
-    label.textContent = collecting ? "Currently imaging" : "Next target";
+    label.textContent = collecting ? "Imaging now" : "Next target";
     if (s?.site) {
       const team = TEAM_BY_ID[s.site.team];
       target.textContent = s.site.name;
       teamDot.style.background = team.color;
-      metaText.textContent = `${team.name}, ${s.site.funded} funded request${s.site.funded === 1 ? "" : "s"}`;
+      metaText.textContent = `${team.name} · ${s.site.funded} funded request${s.site.funded === 1 ? "" : "s"}`;
       meta.style.display = "flex";
     } else {
       target.textContent = "No funded target ahead";
@@ -160,7 +164,7 @@ function buildSatCard(def: SatelliteDef) {
     }
     const showEta = !collecting && s?.etaMs != null;
     eta.style.display = showEta ? "block" : "none";
-    if (showEta && s?.etaMs != null) eta.textContent = `Next acquisition in ${formatEta(s.etaMs)}`;
+    if (showEta && s?.etaMs != null) eta.textContent = `Starts in ${formatEta(s.etaMs)}`;
     if (s) pos.textContent = formatLatLon(s.pos[0], s.pos[1]);
   };
 
@@ -172,8 +176,8 @@ export default function OrbitalMap({ sites, activeKeys, satStates }: Props) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const satStatesRef = useRef<SatState[] | null>(satStates);
   const [ready, setReady] = useState(false);
-  const [follow, setFollow] = useState<FollowMode>("T1");
-  const followRef = useRef<{ mode: FollowMode; zoomUntil: number }>({ mode: "T1", zoomUntil: 2500 });
+  const [follow, setFollow] = useState<FollowMode>("off");
+  const followRef = useRef<{ mode: FollowMode; zoomUntil: number }>({ mode: "off", zoomUntil: 0 });
 
   const setFollowMode = (mode: FollowMode) => {
     followRef.current = { mode, zoomUntil: mode === "off" ? 0 : performance.now() + 1800 };
@@ -191,15 +195,23 @@ export default function OrbitalMap({ sites, activeKeys, satStates }: Props) {
     const map = new MapLibreMap({
       container: container.current,
       style: BASEMAP_STYLE_URL,
-      center: VIEWS.americas.center,
-      zoom: VIEWS.americas.zoom,
+      // Parked on the whole globe with the Tanagers in the middle. Zoom in from there.
+      center: tanagerCenter(simNow()),
+      zoom: globeFitZoom(container.current),
       minZoom: 0.5,
       attributionControl: false,
     });
     mapRef.current = map;
 
-    map.addControl(new NavigationControl({ showCompass: true, showZoom: true }), "bottom-right");
-    map.addControl(new AttributionControl({ compact: true }), "bottom-left");
+    map.addControl(new NavigationControl({ showCompass: false, showZoom: true }), "bottom-right");
+    map.addControl(new AttributionControl({ compact: true }), "bottom-right");
+    // Compact attribution starts expanded on small screens; keep it as the small (i) until tapped.
+    const collapseAttribution = () =>
+      container.current
+        ?.querySelectorAll(".maplibregl-ctrl-attrib.maplibregl-compact-show")
+        .forEach((el) => el.classList.remove("maplibregl-compact-show"));
+    map.once("load", collapseAttribution);
+    map.once("idle", collapseAttribution);
 
     map.on("style.load", () => {
       // Globe projection (MapLibre GL JS 5+): zoom out and the world becomes a sphere.
@@ -536,12 +548,12 @@ export default function OrbitalMap({ sites, activeKeys, satStates }: Props) {
     };
   }, [ready]);
 
-  const fly = (view: "tanagers" | keyof typeof VIEWS) => {
+  const fly = (view: "tanagers" | "world") => {
     const map = mapRef.current;
     if (!map) return;
     setFollowMode("off");
-    if (view !== "tanagers") {
-      map.easeTo({ ...VIEWS[view], duration: 1400 });
+    if (view === "world") {
+      map.easeTo({ center: tanagerCenter(simNow()), zoom: globeFitZoom(map.getContainer()), duration: 1400 });
       return;
     }
     // Aim where the satellites will be when the camera arrives, since they move quickly.
@@ -561,60 +573,57 @@ export default function OrbitalMap({ sites, activeKeys, satStates }: Props) {
         aria-label="Simulated Tanager orbital operations map"
       />
 
-      <div className="absolute left-5 top-5 z-10">
-        <p className="text-sm font-medium text-slate-300">Live orbital view</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(["tanagers", "americas", "world"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => fly(v)} className={pill}>
-              {v === "tanagers" ? "Tanagers" : v === "americas" ? "Americas" : "World"}
-            </button>
-          ))}
+      <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-2 sm:left-4 sm:top-4">
+        <div className="flex rounded-lg border border-white/10 bg-[#0B0D1F]/80 p-0.5 backdrop-blur-xl">
+          <button type="button" onClick={() => fly("world")} className={ctl}>
+            World
+          </button>
+          <button type="button" onClick={() => fly("tanagers")} className={ctl}>
+            Tanagers
+          </button>
           <button
             type="button"
             aria-pressed={follow !== "off"}
             onClick={() => setFollowMode(follow === "off" ? "T1" : "off")}
-            className={`${pill} ${follow !== "off" ? pillOn : ""}`}
+            title="Keep the camera on a satellite. Drag the map to stop."
+            className={`${ctl} ${follow !== "off" ? ctlOn : ""}`}
           >
             <span
-              className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${
-                follow !== "off" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" : "bg-slate-500"
-              }`}
+              className={`h-1.5 w-1.5 rounded-full ${follow !== "off" ? "bg-emerald-400" : "bg-slate-500"}`}
               aria-hidden
             />
             Follow
           </button>
         </div>
         {follow !== "off" && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {([...SATELLITES.map((d) => ({ id: d.id as FollowMode, label: d.name.replace("TANAGER", "Tanager") })), { id: "both" as FollowMode, label: "Both" }]).map((o) => (
+          <div className="flex rounded-lg border border-white/10 bg-[#0B0D1F]/80 p-0.5 backdrop-blur-xl">
+            {[
+              ...SATELLITES.map((d) => ({ id: d.id as FollowMode, label: d.name.replace("TANAGER-", "T") })),
+              { id: "both" as FollowMode, label: "Both" },
+            ].map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => setFollowMode(o.id)}
-                className={`${pill} !px-2.5 !py-1 ${follow === o.id ? pillOn : ""}`}
+                className={`${ctl} ${follow === o.id ? ctlOn : ""}`}
               >
                 {o.label}
               </button>
             ))}
-            <span className="text-xs text-slate-500">Drag the map to stop</span>
           </div>
         )}
       </div>
 
-      <div className="pointer-events-none absolute right-5 top-5 z-10 rounded-xl border border-white/10 bg-[#0B0D1F]/75 px-3 py-2 backdrop-blur-xl">
-        <div className="flex items-center gap-3.5">
-          {TEAMS.map((t) => (
-            <span key={t.id} className="flex items-center gap-1.5 text-xs text-slate-300">
-              <span className="h-2 w-2 rounded-full" style={{ background: t.color }} aria-hidden />
-              {t.short}
-            </span>
-          ))}
-        </div>
-        <p className="mt-1 text-[11px] text-slate-500">Solid outline is funded, dashed is waitlisted</p>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-3 left-24 rounded-xl border border-white/10 bg-[#0B0D1F]/75 px-3 py-2 backdrop-blur">
-        <p className="text-xs text-slate-500">Simulated orbital data</p>
+      <div
+        className="pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-2.5 rounded-md bg-[#0B0D1F]/70 px-2 py-1 backdrop-blur sm:left-4 sm:gap-3"
+        title="Solid outline: funded. Dashed: waitlisted."
+      >
+        {TEAMS.map((t) => (
+          <span key={t.id} className="flex items-center gap-1 text-[10px] text-slate-400 sm:text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: t.color }} aria-hidden />
+            {t.short}
+          </span>
+        ))}
       </div>
     </div>
   );
